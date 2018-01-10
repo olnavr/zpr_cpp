@@ -1,0 +1,15 @@
+potrzebne:
+	openssl (na unixie libssl-dev)
+	libuv (ktore jest installowane wraz z datastax-cppdriver'em (przynajmniej na windowsie))
+	datastax cpp-driver (https://github.com/datastax/cpp-driver)
+	
+	cassandra : http://cassandra.apache.org/download/
+
+	python (min. 2.7 chyba)
+1. zbudowac program
+2. uruchomic cassandre
+3. uruchomic cqlsh (pythonowy shell dla cassandry)
+4. uruchomic program
+	jezeli wyskoczy error ze examples juz istnieje  w cqshl-> DROP KEYSPACE examples;
+5. sprawdzic jak wyglada tablica za pomoca komendy w cqlsh
+	SELECT * FROM examples.logs;
