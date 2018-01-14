@@ -36,7 +36,11 @@ auto execFuncOnSensorList = [&](OHMWrapper^ ohm, TFuncPtr& f)
 		auto sensorList = helement->getSensors();
 		for each(auto selement in sensorList)
 		{
-			f(selement->getName() + selement->getType(), selement->getValue());
+			f(selement->getName() + 
+#ifdef _WIN32
+				" " +
+#endif
+				selement->getType(), selement->getValue());
 		}
 	}
 };

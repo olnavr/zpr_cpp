@@ -6,6 +6,8 @@
 #include <map>
 #include <memory>
 #include <algorithm>
+#include <tuple>
+#include <iostream>
 #ifdef _WIN32
 #include <functional>
 #endif
@@ -18,10 +20,11 @@ public:
 	void sendContainerData();
 
 	bool prepareCassandra();
-
+	float getUpdatePeriod();
 	~CassServ();
 private:
 	char* hosts_;
+	float updatePeriod;
 	CassUuidGen* uuid_gen_;
 	CassFuture* connect_future_;
 	CassCluster* cluster_;

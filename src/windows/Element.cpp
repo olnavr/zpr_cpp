@@ -1,6 +1,5 @@
-#include "stdafx.h"
 #include "Element.h"
-#include "Exception.h"
+
 typedef OpenHardwareMonitor::Hardware::IHardware Hardware;
 typedef OpenHardwareMonitor::Hardware::ISensor Sensor;
 

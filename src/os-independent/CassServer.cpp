@@ -73,15 +73,63 @@ bool CassServ::prepareCassandra()
 		return preparation_gone_well; }
 
 	rc_ = execute_query(session_,
-		"CREATE KEYSPACE examples WITH replication = { \
+		"CREATE KEYSPACE IF NOT EXISTS zpr WITH replication = { \
                 'class': 'SimpleStrategy', 'replication_factor': '3' };");
 
 	rc_ = execute_query(session_,
-		"CREATE TABLE examples.logs (key text, time timeuuid, value text, \
-                PRIMARY KEY (key, time));");
+		"CREATE TABLE IF NOT EXISTS zpr.logs ( key text, time timeuuid, value text, \
+                PRIMARY KEY (key,time));");
+	rc_ = execute_query(session_,
+		"TRUNCATE TABLE zpr.logs");
+	rc_ = execute_query(session_,
+		"CREATE TABLE IF NOT EXISTS zpr.names (key text, name text, \
+                PRIMARY KEY (key))");
+	rc_ = execute_query(session_,
+		"TRUNCATE TABLE zpr.names");
+
+	CassStatement* statement = cass_statement_new("INSERT INTO zpr.names (key, name) VALUES (?, ?);", 2);
+	CassFuture* result_future = cass_session_execute(session_, statement);
+
+	std::for_each(std::begin(container_->container_), std::end(container_->container_), [&](const auto& p)
+	{
+		cass_statement_bind_string(statement, 0, p.first.c_str());
+		result_future = cass_session_execute(session_, statement);
+		cass_future_wait(result_future);
+
+		rc_ = cass_future_error_code(result_future);
+		if (rc_ != CASS_OK) print_error(result_future);
+	});
+	
+	cass_future_free(result_future);
+	cass_statement_free(statement);
 
 	return preparation_gone_well;
 }
+
+float CassServ::getUpdatePeriod() { 
+
+	CassStatement* statement = cass_statement_new("SELECT * FROM timekeyspace.time", 0);
+	CassFuture* result_future = cass_session_execute(session_, statement);
+
+	if (cass_future_error_code(result_future) == CASS_OK) {
+		/* Retrieve result set and get the first row */
+		const CassResult* result = cass_future_get_result(result_future);
+		const CassRow* row = cass_result_first_row(result);
+
+		if (row) {
+			const CassValue* value = cass_row_get_column_by_name(row, "seconds");
+			//cass_value_get_string(value, &release_version, &release_version_length);
+			cass_value_get_float(value, &updatePeriod);
+		}
+
+		cass_result_free(result);
+	}
+	else {
+		/* Handle error */
+		print_error(result_future);
+		updatePeriod = 1.0;
+	}
+	return updatePeriod; }
 
 template <typename Iter>
 auto insert_into_logs = [=](CassSession* session, const char* key, CassUuidGen* uuid_gen, Iter iterBegin, Iter iterEnd)
@@ -93,11 +141,8 @@ auto insert_into_logs = [=](CassSession* session, const char* key, CassUuidGen* 
 
 	CassUuid uuid;
 
-	const char* query = "INSERT INTO examples.logs (key, time, value) VALUES (?, ?, ?);";
-
+	const char* query = "INSERT INTO zpr.logs (key, time, value) VALUES (?, ?, ?);";
 	statement = cass_statement_new(query, 3);
-
-	cass_statement_bind_string(statement, 0, "test");
 
 	cass_uuid_gen_time(uuid_gen, &uuid);
 

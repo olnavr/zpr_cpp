@@ -2,6 +2,8 @@
 #ifndef _ELEMENT_H
 #define _ELEMENT_H
 #include "stdafx.h"
+#include "Exception.h"
+#include "stdafx.h"
 #include <msclr\marshal_cppstd.h>
 using namespace System::Collections::Generic;
 

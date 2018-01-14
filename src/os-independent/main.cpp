@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <algorithm>
+#include <chrono>
 #ifdef _WIN32
 	#include <stdlib.h>
 	#include <map>
@@ -26,14 +27,59 @@
 	#include "OS.h"
 #endif
 //Initialization of crucial resources
+
+auto update = [](CassServ* cass
+#ifdef _WIN32
+	,WindowsContainer^ contUpdater
+#endif
+#ifdef linux
+
+#endif
+	)
+{
+	auto period = cass->getUpdatePeriod();
+	std::cout << "Period: " << period;
+	auto now = std::chrono::system_clock::now();
+	auto lastUpdateTime = std::chrono::system_clock::now();
+	auto timepoint = std::chrono::seconds(static_cast<int>(period));
+	auto sleepForInSeconds = static_cast<int>(period);
+
+	cass->sendContainerData();
+#ifdef _WIN32
+	contUpdater->update();
+#endif
+	while (true)
+	{
+		now = std::chrono::system_clock::now();
+		if ((now - lastUpdateTime) > timepoint)
+		{
+			cass->sendContainerData();
+#ifdef _WIN32
+			contUpdater->update(); //windows sensor information update
+#endif
+#ifdef linux
+
+#endif
+			lastUpdateTime = std::chrono::system_clock::now();
+			//timepoint = std::chrono::seconds(static_cast<int>(cass->getUpdatePeriod()));
+		}
+#ifdef _WIN32
+		System::Threading::Thread::Sleep(System::TimeSpan::FromSeconds(sleepForInSeconds)); //windows thread sleep
+#endif
+#ifdef linux
+
+#endif
+	}
+};
+
 void run()
 {
-	std::unique_ptr<Container> container = std::make_unique<Container>();
+	std::shared_ptr<Container> container = std::make_shared<Container>();
 
 	#ifdef _WIN32
 		OHMWrapper^ wrapper = gcnew OHMWrapper;
-		WindowsContainer windowsContainer(container.get(), wrapper);
-		windowsContainer.add();
+		WindowsContainer^ windowsContainer = gcnew WindowsContainer(container.get(), wrapper);
+		windowsContainer->add();
 	#endif
 
 	#ifdef _DEBUG
@@ -47,13 +93,12 @@ void run()
 	auto preparation_went_well = cassServ.prepareCassandra();
 	if (!preparation_went_well) return;
 
-	int i = 100;
-	while (i-- > 0) {
-		cassServ.sendContainerData();
-		#ifdef _WIN32
-			windowsContainer.update();
-		#endif
-	}
+	#ifdef _WIN32
+		update(&cassServ, windowsContainer);
+	#endif
+	#ifdef linux
+		//
+	#endif
 }
 
 #ifdef _WIN32
